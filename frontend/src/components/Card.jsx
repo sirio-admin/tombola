@@ -20,12 +20,57 @@ const Card = () => {
                 }
                 setDeviceUuid(uuid)
 
-                // 2. Get card_id from URL
+                // 2. Get card_id from URL or check for random assignment
                 const urlParams = new URLSearchParams(window.location.search)
-                const cardId = urlParams.get('card_id')
+                const cardIdParam = urlParams.get('card_id')
+                const cardId = cardIdParam ? parseInt(cardIdParam, 10) : null
+                const isRandom = urlParams.get('random') === 'true'
 
-                if (!cardId) {
-                    setError('Nessuna cartella specificata. Scansiona un QR code valido.')
+                // Handle random card assignment
+                if (isRandom) {
+                    console.log('Random card assignment requested')
+
+                    // Get multiple available cards to pick randomly from
+                    const { data: availableCards, error: searchError } = await supabase
+                        .from('cards')
+                        .select('id')
+                        .is('owner_uuid', null)
+                        .limit(50)  // Get 50 cards to randomly choose from
+
+                    if (searchError || !availableCards || availableCards.length === 0) {
+                        setError('Nessuna cartella disponibile. Tutte le cartelle sono già state assegnate!')
+                        setLoading(false)
+                        return
+                    }
+
+                    // Pick a truly random card from available ones
+                    const randomIndex = Math.floor(Math.random() * availableCards.length)
+                    const randomCardId = availableCards[randomIndex].id
+                    console.log(`Assigning random card ${randomCardId} (selected from ${availableCards.length} available)`)
+
+                    // Claim the card immediately
+                    const { data: claimedCard, error: claimError } = await supabase
+                        .from('cards')
+                        .update({ owner_uuid: uuid })
+                        .eq('id', randomCardId)
+                        .is('owner_uuid', null) // Double-check it's still available
+                        .select()
+                        .single()
+
+                    if (claimError || !claimedCard) {
+                        // Card was taken by someone else, try again
+                        console.warn('Card claimed by someone else, retrying...')
+                        window.location.reload()
+                        return
+                    }
+
+                    // Redirect to the assigned card
+                    window.location.href = `?card_id=${randomCardId}`
+                    return
+                }
+
+                if (!cardId || isNaN(cardId)) {
+                    setError('Nessuna cartella specificata o ID non valido. Scansiona un QR code valido.')
                     setLoading(false)
                     return
                 }
@@ -35,9 +80,15 @@ const Card = () => {
                     .from('cards')
                     .select('*')
                     .eq('id', cardId)
-                    .single()
+                    .maybeSingle()
 
                 if (fetchError) {
+                    setError(`Errore DB: ${fetchError.message}`)
+                    setLoading(false)
+                    return
+                }
+
+                if (!card) {
                     setError('Cartella non trovata.')
                     setLoading(false)
                     return
@@ -161,7 +212,7 @@ const Card = () => {
                     <div className="card-grid">
                         {cardData.numbers.map((row, rowIndex) => (
                             <div key={rowIndex} className="card-grid-row">
-                                {row.slice(0, 7).map((number, colIndex) => (
+                                {row.map((number, colIndex) => (
                                     <div
                                         key={`${rowIndex}-${colIndex}`}
                                         className="relative flex items-center justify-center shadow-lg rounded-xl transition-all duration-200 select-none"

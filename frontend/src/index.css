@@ -80,6 +80,49 @@ body {
   }
 }
 
+/* Landscape orientation support */
+@media (orientation: landscape) {
+  .card-container {
+    aspect-ratio: 1.6 / 1;  /* Slightly wider than original */
+    height: 70vh;  /* Reduced height to show full border */
+    width: auto;   /* Width calculated from aspect-ratio */
+    max-width: 90vw;  /* Don't exceed viewport width */
+  }
+
+  .card-background {
+    background: url('/assets/cartella-bg-landscape.jpeg') center/contain no-repeat;  /* Back to contain to avoid cutting */
+  }
+
+  .card-grid {
+    top: 43%;    /* More space from top */
+    right: 28%;  /* More margin on sides */
+    bottom: 32%; /* More space from bottom */
+    left: 28%;   /* More margin on sides */
+  }
+
+  .card-grid-row {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: clamp(1px, 0.2vw, 1.5px);  /* Even smaller gap for compact cells */
+  }
+}
+
+/* Mobile landscape specific adjustments */
+@media (max-width: 896px) and (orientation: landscape) {
+  .card-container {
+    aspect-ratio: 1.8 / 1;  /* Same ratio as desktop */
+    height: 75vh;  /* Adjusted for mobile */
+    width: auto;
+    max-width: 90vw;
+  }
+
+  .card-grid {
+    top: 22%;   /* Adjusted for mobile */
+    right: 12%;
+    bottom: 22%;
+    left: 12%;
+  }
+}
+
 /* Smooth animations */
 @layer utilities {
   .transition-smooth {
