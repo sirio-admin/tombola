@@ -109,17 +109,17 @@ body {
 /* Mobile landscape specific adjustments */
 @media (max-width: 896px) and (orientation: landscape) {
   .card-container {
-    aspect-ratio: 1.8 / 1;  /* Same ratio as desktop */
-    height: 75vh;  /* Adjusted for mobile */
+    aspect-ratio: 1.6 / 1;  /* Match desktop ratio */
+    height: 70vh;  /* Match desktop */
     width: auto;
     max-width: 90vw;
   }
 
   .card-grid {
-    top: 22%;   /* Adjusted for mobile */
-    right: 12%;
-    bottom: 22%;
-    left: 12%;
+    top: 43%;   /* Same as desktop for consistent small cells */
+    right: 28%;
+    bottom: 32%;
+    left: 28%;
   }
 }
 
