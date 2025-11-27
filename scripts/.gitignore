@@ -1,0 +1,5 @@
+.env
+*.pyc
+__pycache__/
+qr_codes/*.png
+.DS_Store

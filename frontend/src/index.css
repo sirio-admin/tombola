@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Tombola Styles with Deep Twilight Palette */
+:root {
+  --deep-twilight: #07094A;
+  --deep-twilight-3: #07095C;
+  --lavender: #DCDCEF;
+  --white-custom: #FEFEFE;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--deep-twilight);
+  color: var(--white-custom);
+}
+
+/* Tombola layout helpers */
+.card-shell {
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.card-container {
+  position: relative;
+  aspect-ratio: 1080 / 2310;
+  height: 100vh;
+  max-height: 100vh;
+  max-width: 100vw;
+  margin: 0 auto;
+}
+
+.card-background {
+  position: absolute;
+  inset: 0;
+  background: url('/assets/cartella-bg.jpeg') center/contain no-repeat;
+}
+
+.card-grid {
+  position: absolute;
+  top: 12%;
+  right: 11%;
+  bottom: 12%;
+  left: 11%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(0px, 0.4vw, 2px);
+}
+
+.card-grid-row {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: clamp(1px, 0.4vw, 3px);
+}
+
+.card-grid-row + .card-grid-row {
+  margin-top: clamp(0px, 0.3vw, 2px);
+}
+
+@media (max-width: 480px) {
+  .card-container {
+    width: 100%;
+  }
+
+  .card-grid {
+    top: 13%;
+    right: 10%;
+    bottom: 13%;
+    left: 10%;
+  }
+}
+
+/* Smooth animations */
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
