@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { v4 as uuidv4 } from 'uuid'
+import Confetti from 'react-confetti'
+import { Fireworks } from '@fireworks-js/react'
 
 const Card = () => {
     const [cardData, setCardData] = useState(null)
@@ -8,6 +10,16 @@ const Card = () => {
     const [error, setError] = useState(null)
     const [loading, setLoading] = useState(true)
     const [deviceUuid, setDeviceUuid] = useState(null)
+    const [isWinner, setIsWinner] = useState(false)
+    const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight })
+
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+        }
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     useEffect(() => {
         const initializeCard = async () => {
@@ -106,7 +118,7 @@ const Card = () => {
                         .eq('id', cardId)
                         .is('owner_uuid', null) // Ensure it's still unclaimed
                         .select()
-                        .single()
+                        .maybeSingle()
 
                     console.log('Update result:', { updatedCard, updateError })
 
@@ -118,7 +130,34 @@ const Card = () => {
                     }
 
                     if (!updatedCard) {
-                        // Someone else claimed it between our read and update
+                        // The update didn't affect any rows. This implies the card is no longer 'owner_uuid IS NULL'.
+                        // Check if WE own it (e.g., double-fire in StrictMode or race condition).
+                        const { data: currentCardOwner } = await supabase
+                            .from('cards')
+                            .select('owner_uuid')
+                            .eq('id', cardId)
+                            .maybeSingle()
+                        
+                        if (currentCardOwner && currentCardOwner.owner_uuid === uuid) {
+                             // It's ours! The previous attempt must have succeeded.
+                             // Fetch the full card data to display it.
+                             const { data: myCard } = await supabase
+                                .from('cards')
+                                .select('*')
+                                .eq('id', cardId)
+                                .single()
+                             
+                             setCardData(myCard)
+                             setMarkedNumbers(myCard.marked_numbers || [])
+                             // Check initial win state
+                             if (myCard.marked_numbers && myCard.marked_numbers.length === 15) {
+                                 setIsWinner(true)
+                             }
+                             setLoading(false)
+                             return
+                        }
+
+                        // Someone else claimed it
                         console.warn('Card was not updated. It might be already claimed.')
                         setError('Questa cartella è stata appena presa da qualcun altro.')
                         setLoading(false)
@@ -127,10 +166,16 @@ const Card = () => {
 
                     setCardData(updatedCard)
                     setMarkedNumbers(updatedCard.marked_numbers || [])
+                    if (updatedCard.marked_numbers && updatedCard.marked_numbers.length === 15) {
+                         setIsWinner(true)
+                    }
                 } else if (card.owner_uuid === uuid) {
                     // This is our card - load it
                     setCardData(card)
                     setMarkedNumbers(card.marked_numbers || [])
+                    if (card.marked_numbers && card.marked_numbers.length === 15) {
+                         setIsWinner(true)
+                    }
                 } else {
                     // Card belongs to someone else
                     setError('Questa cartella è già stata presa da un altro dispositivo.')
@@ -158,6 +203,13 @@ const Card = () => {
 
         // Optimistic UI update
         setMarkedNumbers(newMarkedNumbers)
+        
+        // Check for win
+        if (newMarkedNumbers.length === 15) {
+            setIsWinner(true)
+        } else {
+            setIsWinner(false)
+        }
 
         // Update in Supabase
         try {
@@ -171,10 +223,13 @@ const Card = () => {
                 console.error('Error updating marked numbers:', updateError)
                 // Revert on error
                 setMarkedNumbers(markedNumbers)
+                // Revert win state if needed, though rare
+                setIsWinner(markedNumbers.length === 15)
             }
         } catch (err) {
             console.error('Error updating card:', err)
             setMarkedNumbers(markedNumbers)
+            setIsWinner(markedNumbers.length === 15)
         }
     }
 
@@ -204,9 +259,107 @@ const Card = () => {
     if (!cardData) return null
 
     return (
-        <div className="min-h-screen bg-deep-twilight flex flex-col items-center justify-center px-3 py-3">
+        <div className="min-h-screen bg-deep-twilight flex flex-col items-center justify-center px-3 py-3 relative overflow-hidden">
+            {isWinner && (
+                <>
+                    <Fireworks
+                        options={{
+                            opacity: 0.5,
+                            particles: 200, // High particle count
+                            explosion: 7,   // Intensity of explosion
+                            intensity: 40,  // Frequency of fireworks
+                            friction: 0.96, // Gravity/decay
+                            gravity: 1.2,
+                            acceleration: 1.02,
+                            delay: { min: 15, max: 30 },
+                            rocketsPoint: { min: 0, max: 100 }, // Launch from entire bottom width
+                            lineWidth: { explosion: { min: 1, max: 4 }, trace: { min: 0.1, max: 1 } },
+                            brightness: { min: 50, max: 80, decay: { min: 0.015, max: 0.03 } },
+                        }}
+                        style={{
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            position: 'fixed',
+                            zIndex: 40, // Behind the modal (z-50) but above page
+                            pointerEvents: 'none',
+                        }}
+                    />
+                    <Confetti
+                        width={windowSize.width}
+                        height={windowSize.height}
+                        recycle={true}
+                        numberOfPieces={200}
+                    />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-2 md:p-4 transition-all duration-500 overflow-y-auto">
+                        <div 
+                            className="relative rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full max-w-[95vw] md:max-w-7xl flex flex-row items-center justify-between md:justify-center gap-2 md:gap-16 p-4 pb-16 md:p-20 md:pb-32 overflow-hidden border border-white/10"
+                            style={{ 
+                                background: 'linear-gradient(135deg, #07094A 0%, #1e3a8a 50%, #DCDCEF 100%)', 
+                                boxShadow: '0 25px 80px -10px rgba(0, 0, 0, 0.7)'
+                            }}
+                        >
+                             {/* Sfondo decorativo */}
+                             <div className="absolute top-0 right-0 w-40 h-40 md:w-96 md:h-96 bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 md:-mr-32 md:-mt-32 pointer-events-none"></div>
+                             <div className="absolute bottom-0 left-0 w-40 h-40 md:w-80 md:h-80 bg-blue-400/10 rounded-full blur-3xl -ml-10 -mb-10 md:-ml-20 md:-mb-20 pointer-events-none"></div>
+
+                            {/* Trofeo Sinistra - Sempre visibile a lato */}
+                            <div 
+                                className="relative z-10 filter drop-shadow-2xl animate-[bounce_2s_infinite] leading-none flex-shrink-0 select-none origin-center"
+                                style={{ 
+                                    fontSize: 'clamp(4rem, 14vw, 10rem)', // Reduced size by ~20%
+                                    marginRight: '-0.5rem' 
+                                }}
+                            >
+                                🏆
+                            </div>
+                            
+                            {/* Contenitore Centrale */}
+                            <div className="relative z-20 flex flex-col items-center text-center flex-grow w-full min-w-0 px-1">
+                                <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-9xl font-black tracking-wider uppercase mb-4 md:mb-8 text-white drop-shadow-xl leading-tight whitespace-nowrap">
+                                    HAI VINTO!
+                                </h1>
+                                
+                                <button 
+                                    onClick={() => setIsWinner(false)}
+                                    className="group transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl active:scale-95"
+                                    style={{
+                                        background: '#ffffff',
+                                        color: '#07094A',
+                                        padding: '0.8rem 2rem',
+                                        fontSize: '1rem',
+                                        fontWeight: '800',
+                                        borderRadius: '9999px',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        letterSpacing: '0.1em',
+                                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+                                    }}
+                                >
+                                    <span className="md:hidden">CONTROLLA</span>
+                                    <span className="hidden md:inline text-xl px-4 py-1">CONTROLLA</span>
+                                </button>
+                            </div>
+
+                            {/* Trofeo Destra - Sempre visibile a lato */}
+                            <div 
+                                className="relative z-10 filter drop-shadow-2xl animate-[bounce_2s_infinite] leading-none flex-shrink-0 select-none delay-100 origin-center"
+                                style={{ 
+                                    fontSize: 'clamp(4rem, 14vw, 10rem)', // Reduced size by ~20%
+                                    marginLeft: '-0.5rem'
+                                }}
+                            >
+                                🏆
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
+
             <div className="card-shell">
                 <div className="card-container">
+
                     <div className="card-background" aria-hidden="true" />
 
                     <div className="card-grid">
@@ -229,11 +382,9 @@ const Card = () => {
                                         {number && (
                                             <>
                                                 <span
-                                                    className="font-bold"
+                                                    className="font-bold card-number-text"
                                                     style={{
-                                                        zIndex: 31,
-                                                        color: '#000000',
-                                                        fontSize: 'clamp(1.35rem, 4vw, 2.7rem)'
+                                                        zIndex: 31
                                                     }}
                                                 >
                                                     {number}
