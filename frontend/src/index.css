@@ -83,43 +83,48 @@ body {
 /* Landscape orientation support */
 @media (orientation: landscape) {
   .card-container {
-    aspect-ratio: 1.6 / 1;  /* Slightly wider than original */
-    height: 70vh;  /* Reduced height to show full border */
-    width: auto;   /* Width calculated from aspect-ratio */
-    max-width: 90vw;  /* Don't exceed viewport width */
+    aspect-ratio: 1376 / 768;
+    height: 85vh;
+    width: auto;
+    max-width: 95vw;
   }
 
   .card-background {
-    background: url('/assets/cartella-bg-landscape.jpeg') center/contain no-repeat;  /* Back to contain to avoid cutting */
+    background: url('/assets/cartella-bg-landscape.jpeg') center/100% 100% no-repeat;
   }
 
   .card-grid {
-    top: 43%;    /* More space from top */
-    right: 28%;  /* More margin on sides */
-    bottom: 32%; /* More space from bottom */
-    left: 28%;   /* More margin on sides */
+    top: 45%;
+    right: 14%;
+    bottom: 23%;
+    left: 14%;
   }
 
   .card-grid-row {
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: clamp(1px, 0.2vw, 1.5px);  /* Even smaller gap for compact cells */
+    gap: 0.5vw;
+  }
+  
+  /* Landscape specific text sizing using vh to avoid oversized text on wide screens */
+  .card-number-text {
+    font-size: clamp(1rem, 5vh, 2.2rem) !important;
   }
 }
 
 /* Mobile landscape specific adjustments */
 @media (max-width: 896px) and (orientation: landscape) {
   .card-container {
-    aspect-ratio: 1.6 / 1;  /* Match desktop ratio */
-    height: 70vh;  /* Match desktop */
+    aspect-ratio: 1376 / 768;
+    height: 90vh;
     width: auto;
-    max-width: 90vw;
+    max-width: 95vw;
   }
 
   .card-grid {
-    top: 43%;   /* Same as desktop for consistent small cells */
-    right: 28%;
-    bottom: 32%;
-    left: 28%;
+    top: 45%;
+    right: 14%;
+    bottom: 23%;
+    left: 14%;
   }
 }
 
@@ -128,4 +133,9 @@ body {
   .transition-smooth {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+}
+
+.card-number-text {
+  color: #000000;
+  font-size: clamp(1.35rem, 4vw, 2.7rem);
 }
